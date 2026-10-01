@@ -1,5 +1,3 @@
-"""Chargement de la configuration depuis les variables d'environnement."""
-
 import os
 
 from dotenv import load_dotenv
