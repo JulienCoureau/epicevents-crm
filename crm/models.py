@@ -1,8 +1,16 @@
 """Modèles de données : une classe par table du schéma (docs/schema-bdd.md)."""
 
 from datetime import datetime
-
-from sqlalchemy import ForeignKey, String, DateTime, func
+from decimal import Decimal
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Numeric,
+    ForeignKey,
+    String,
+    DateTime,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -61,6 +69,34 @@ class Client(Base):
     commercial_id: Mapped[int] = mapped_column(ForeignKey("collaborateur.id"))
 
     commercial: Mapped["Collaborateur"] = relationship(back_populates="clients")
+    contrats: Mapped[list["Contrat"]] = relationship(back_populates="client")
 
     def __repr__(self) -> str:
         return f"Client(id={self.id}, nom_complet={self.nom_complet!r})"
+
+
+class Contrat(Base):
+    """Contrat passé avec un client"""
+
+    __tablename__ = "contrat"
+    __table_args__ = (
+        CheckConstraint("montant_total >= 0", name="montant_total_positif"),
+        CheckConstraint(
+            "montant_restant >= 0 AND montant_restant <= montant_total",
+            name="montant_restant_valide",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("client.id"))
+    montant_total: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    montant_restant: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    date_creation: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    signe: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    client: Mapped["Client"] = relationship(back_populates="contrats")
+
+    def __repr__(self) -> str:
+        return f"Contrat(id={self.id}, signe={self.signe})"
