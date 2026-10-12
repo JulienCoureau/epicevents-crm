@@ -10,6 +10,7 @@ from sqlalchemy import (
     String,
     DateTime,
     func,
+    Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -45,6 +46,7 @@ class Collaborateur(Base):
 
     role: Mapped["Role"] = relationship(back_populates="collaborateurs")
     clients: Mapped[list["Client"]] = relationship(back_populates="commercial")
+    evenements: Mapped[list["Evenement"]] = relationship(back_populates="support")
 
     def __repr__(self) -> str:
         return f"Collaborateur(id={self.id}, email={self.email!r})"
@@ -97,6 +99,33 @@ class Contrat(Base):
     signe: Mapped[bool] = mapped_column(Boolean, default=False)
 
     client: Mapped["Client"] = relationship(back_populates="contrats")
+    evenement: Mapped["Evenement | None"] = relationship(back_populates="contrat")
 
     def __repr__(self) -> str:
         return f"Contrat(id={self.id}, signe={self.signe})"
+
+
+class Evenement(Base):
+    """Événement organisé pour un contrat signé, suivi par un collaborateur"""
+
+    __tablename__ = "evenement"
+    __table_args__ = (
+        CheckConstraint("date_fin > date_debut", name="dates_coherentes"),
+        CheckConstraint("participants >= 0", name="participants_positif"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nom: Mapped[str] = mapped_column(String(100))
+    contrat_id: Mapped[int] = mapped_column(ForeignKey("contrat.id"), unique=True)
+    support_id: Mapped[int | None] = mapped_column(ForeignKey("collaborateur.id"))
+    date_debut: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    date_fin: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    lieu: Mapped[str] = mapped_column(String(255))
+    participants: Mapped[int]
+    notes: Mapped[str | None] = mapped_column(Text)
+
+    contrat: Mapped["Contrat"] = relationship(back_populates="evenement")
+    support: Mapped["Collaborateur | None"] = relationship(back_populates="evenements")
+
+    def __repr__(self) -> str:
+        return f"Evenement(id={self.id}, nom={self.nom!r})"
