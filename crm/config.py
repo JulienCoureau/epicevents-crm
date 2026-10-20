@@ -31,3 +31,8 @@ def database_url(admin: bool = False) -> URL:
         port=int(os.getenv("DB_PORT", "5432")),
         database=_require("DB_NAME"),
     )
+
+
+def jwt_secret() -> str:
+    """Retourne le secret de signature des jetons JWT."""
+    return _require("JWT_SECRET")
