@@ -1,7 +1,10 @@
-"""Point d'entrée"""
+"""Point d'entrée (ligne de commande)"""
+
+from contextlib import contextmanager
 
 import click
 
+from crm import services, views
 from crm.auth import (
     AuthentificationError,
     authentifier,
@@ -11,6 +14,17 @@ from crm.auth import (
     supprimer_jeton,
 )
 from crm.database import SessionLocal
+from crm.permissions import PermissionRefusee
+
+
+@contextmanager
+def session_authentifiee():
+    """Ouvre une session et fournit le collaborateur connecté."""
+    with SessionLocal() as session:
+        try:
+            yield session, collaborateur_connecte(session)
+        except (AuthentificationError, PermissionRefusee) as erreur:
+            raise click.ClickException(str(erreur)) from None
 
 
 @click.group()
@@ -35,11 +49,7 @@ def login(email: str) -> None:
 @cli.command()
 def whoami() -> None:
     """Afficher l'utilisateur connecté."""
-    with SessionLocal() as session:
-        try:
-            collaborateur = collaborateur_connecte(session)
-        except AuthentificationError as erreur:
-            raise click.ClickException(str(erreur)) from None
+    with session_authentifiee() as (session, collaborateur):
         click.echo(f"{collaborateur.nom} ({collaborateur.role.nom})")
 
 
@@ -48,6 +58,54 @@ def logout() -> None:
     """Fermer la session."""
     supprimer_jeton()
     click.echo("Déconnecté.")
+
+
+@cli.group()
+def clients() -> None:
+    """Gérer les clients."""
+
+
+@clients.command("list")
+def clients_list() -> None:
+    """Afficher tous les clients."""
+    with session_authentifiee() as (session, collaborateur):
+        views.afficher_clients(services.lister_clients(session, collaborateur))
+
+
+@cli.group()
+def contrats() -> None:
+    """Gérer les contrats."""
+
+
+@contrats.command("list")
+@click.option("--non-signes", is_flag=True, help="Seulement les contrats non signés.")
+@click.option("--non-payes", is_flag=True, help="Seulement les contrats non soldés.")
+def contrats_list(non_signes: bool, non_payes: bool) -> None:
+    """Afficher les contrats."""
+    with session_authentifiee() as (session, collaborateur):
+        views.afficher_contrats(
+            services.lister_contrats(session, collaborateur, non_signes, non_payes)
+        )
+
+
+@cli.group()
+def evenements() -> None:
+    """Gérer les événements."""
+
+
+@evenements.command("list")
+@click.option("--sans-support", is_flag=True, help="Seulement ceux sans support.")
+@click.option(
+    "--mes-evenements", is_flag=True, help="Seulement ceux qui me sont attribués."
+)
+def evenements_list(sans_support: bool, mes_evenements: bool) -> None:
+    """Afficher les événements."""
+    with session_authentifiee() as (session, collaborateur):
+        views.afficher_evenements(
+            services.lister_evenements(
+                session, collaborateur, sans_support, mes_evenements
+            )
+        )
 
 
 if __name__ == "__main__":
