@@ -14,6 +14,7 @@ class Action(Enum):
     SUPPRIMER_COLLABORATEUR = "supprimer un collaborateur"
     CREER_CLIENT = "créer un client"
     MODIFIER_CLIENT = "modifier un client"
+    SIGNER_CONTRAT = "signer un contrat"
     CREER_CONTRAT = "créer un contrat"
     MODIFIER_CONTRAT = "modifier un contrat"
     CREER_EVENEMENT = "créer un événement"
@@ -57,6 +58,7 @@ PERMISSIONS = {
         Action.SUPPRIMER_COLLABORATEUR: _toujours,
         Action.CREER_CONTRAT: _toujours,
         Action.MODIFIER_CONTRAT: _toujours,
+        Action.SIGNER_CONTRAT: _toujours,
         Action.MODIFIER_EVENEMENT: _toujours,
     },
     "commercial": {
