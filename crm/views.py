@@ -32,7 +32,7 @@ def afficher_clients(clients: list[Client]) -> None:
         "Créé le",
         "Mis à jour le",
     ):
-        table.add_column(colonne)
+        table.add_column(colonne, overflow="fold")
     for client in clients:
         table.add_row(
             str(client.id),
@@ -59,7 +59,7 @@ def afficher_contrats(contrats: list[Contrat]) -> None:
         "Créé le",
         "Signé",
     ):
-        table.add_column(colonne)
+        table.add_column(colonne, overflow="fold")
     for contrat in contrats:
         table.add_row(
             str(contrat.id),
@@ -88,7 +88,7 @@ def afficher_evenements(evenements: list[Evenement]) -> None:
         "Lieu",
         "Participants",
     ):
-        table.add_column(colonne)
+        table.add_column(colonne, overflow="fold")
     for evenement in evenements:
         client = evenement.contrat.client
         table.add_row(
