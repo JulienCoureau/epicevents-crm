@@ -168,3 +168,10 @@ def test_la_vue_signale_un_evenement_sans_support(ecran, donnees):
 def test_la_vue_affiche_le_contact_client_depuis_le_client(ecran, donnees):
     views.afficher_evenements([donnees.mariage])
     assert "john@test.fr" in ecran.export_text()
+
+
+def test_la_vue_affiche_les_montants_et_la_signature(ecran, donnees):
+    views.afficher_contrats([donnees.a_moitie_paye])
+    texte = ecran.export_text()
+    assert "50.00 €" in texte
+    assert "Oui" in texte
