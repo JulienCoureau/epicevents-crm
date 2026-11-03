@@ -1,4 +1,4 @@
-"""Erreurs métier, toute autre exception est inattendue : c'est un bug, qui sera signalé à Sentry"""
+"""Erreurs métier prévues ; toute autre exception est un bug, signalé à Sentry."""
 
 
 class ErreurMetier(Exception):
