@@ -127,6 +127,52 @@ def contrats_list(non_signes: bool, non_payes: bool) -> None:
         )
 
 
+@contrats.command("create")
+def contrats_create() -> None:
+    """Créer un contrat non signé pour un client (gestion)."""
+    with session_authentifiee() as (session, collaborateur):
+        verifier(collaborateur, Action.CREER_CONTRAT)
+        contrat = services.creer_contrat(
+            session,
+            collaborateur,
+            client_id=click.prompt("Numéro du client", type=int),
+            montant_total=click.prompt("Montant total"),
+            montant_restant=click.prompt(
+                "Reste à payer (vide = montant total)", default="", show_default=False
+            ),
+        )
+        click.echo(f"Contrat n° {contrat.id} créé pour {contrat.client.nom_complet}.")
+
+
+@contrats.command("update")
+@click.argument("contrat_id", type=int)
+@click.option("--montant-total", help="Nouveau montant total.")
+@click.option("--montant-restant", help="Nouveau reste à payer.")
+@click.option(
+    "--client", "client_id", type=int, help="Numéro du nouveau client (gestion)."
+)
+@click.option(
+    "--signe/--non-signe",
+    default=None,
+    help="Signer, ou annuler la signature (gestion).",
+)
+def contrats_update(
+    contrat_id, montant_total, montant_restant, client_id, signe
+) -> None:
+    """Modifier un contrat : seules les options fournies changent."""
+    with session_authentifiee() as (session, collaborateur):
+        contrat = services.modifier_contrat(
+            session,
+            collaborateur,
+            contrat_id,
+            montant_total=montant_total,
+            montant_restant=montant_restant,
+            client_id=client_id,
+            signe=signe,
+        )
+        click.echo(f"Contrat n° {contrat.id} mis à jour.")
+
+
 @cli.group()
 def evenements() -> None:
     """Gérer les événements."""
