@@ -29,6 +29,9 @@ def employe(role: str, id: int = 1) -> Collaborateur:
         ("commercial", Action.CREER_CLIENT, True),
         ("gestion", Action.CREER_CLIENT, False),
         ("support", Action.CREER_CLIENT, False),
+        ("gestion", Action.ATTRIBUER_SUPPORT, True),
+        ("commercial", Action.ATTRIBUER_SUPPORT, False),
+        ("support", Action.ATTRIBUER_SUPPORT, False),
     ],
 )
 def test_droits_qui_dependent_seulement_du_role(role, action, attendu):

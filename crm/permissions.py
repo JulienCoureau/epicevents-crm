@@ -20,6 +20,7 @@ class Action(Enum):
     MODIFIER_CONTRAT = "modifier un contrat"
     CREER_EVENEMENT = "créer un événement"
     MODIFIER_EVENEMENT = "modifier un événement"
+    ATTRIBUER_SUPPORT = "désigner le support d'un événement"
 
 
 class PermissionRefusee(ErreurMetier):
@@ -61,6 +62,7 @@ PERMISSIONS = {
         Action.MODIFIER_CONTRAT: _toujours,
         Action.SIGNER_CONTRAT: _toujours,
         Action.MODIFIER_EVENEMENT: _toujours,
+        Action.ATTRIBUER_SUPPORT: _toujours,
     },
     "commercial": {
         Action.LIRE: _toujours,
