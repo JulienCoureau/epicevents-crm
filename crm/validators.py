@@ -4,10 +4,15 @@ import re
 
 from crm.exceptions import DonneesInvalides
 from decimal import Decimal, InvalidOperation
+from zoneinfo import ZoneInfo
+from datetime import datetime
 
 FORMAT_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 FORMAT_TELEPHONE = re.compile(r"^\+?[0-9 .\-()]{6,30}$")
 MONTANT_MAX = Decimal("99999999.99")
+FORMAT_DATE_HEURE = "%d/%m/%Y %H:%M"
+FUSEAU = ZoneInfo("Europe/Paris")
+PARTICIPANTS_MAX = 100_000  # par feu faute de frappes
 
 
 def texte_obligatoire(valeur: str | None, champ: str, longueur_max: int) -> str:
@@ -47,7 +52,7 @@ def telephone(valeur: str | None) -> str | None:
 
 
 def montant(valeur, champ: str) -> Decimal:
-    """Montant positif ou nul, au centime près ; accepte « 1 500,50 »."""
+    """Montant positif ou nul."""
     texte = str(valeur).strip().replace(" ", "").replace(",", ".")
     try:
         nombre = Decimal(texte)
@@ -62,3 +67,30 @@ def montant(valeur, champ: str) -> Decimal:
     if nombre > MONTANT_MAX:
         raise DonneesInvalides(f"« {champ} » est trop grand.")
     return nombre.quantize(Decimal("0.01"))
+
+
+def date_heure(valeur: str | None, champ: str) -> datetime:
+    """Date et heure au format JJ/MM/AAAA HH:MM, à l'heure de Paris."""
+    texte = (valeur or "").strip()
+    try:
+        moment = datetime.strptime(texte, FORMAT_DATE_HEURE)
+    except ValueError:
+        raise DonneesInvalides(
+            f"« {champ} » : format attendu JJ/MM/AAAA HH:MM."
+        ) from None
+    return moment.replace(tzinfo=FUSEAU)
+
+
+def nombre_participants(valeur) -> int:
+    """Nombre entier, positif ou nul, de participants."""
+    try:
+        nombre = int(str(valeur).strip())
+    except ValueError:
+        raise DonneesInvalides(
+            "Le nombre de participants doit être un entier."
+        ) from None
+    if nombre < 0:
+        raise DonneesInvalides("Le nombre de participants ne peut pas être négatif.")
+    if nombre > PARTICIPANTS_MAX:
+        raise DonneesInvalides("Le nombre de participants est trop grand.")
+    return nombre
