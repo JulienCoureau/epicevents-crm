@@ -80,3 +80,11 @@ def test_un_role_inconnu_n_a_aucun_droit():
 def test_verifier_leve_une_erreur_si_l_action_est_refusee():
     with pytest.raises(PermissionRefusee, match="créer un client"):
         verifier(employe("support"), Action.CREER_CLIENT)
+
+
+def test_les_erreurs_d_acces_sont_des_erreurs_metier():
+    from crm.auth import AuthentificationError
+    from crm.exceptions import ErreurMetier
+
+    assert issubclass(PermissionRefusee, ErreurMetier)
+    assert issubclass(AuthentificationError, ErreurMetier)

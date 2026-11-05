@@ -14,7 +14,8 @@ from crm.auth import (
     supprimer_jeton,
 )
 from crm.database import SessionLocal
-from crm.permissions import PermissionRefusee
+from crm.exceptions import ErreurMetier
+from crm.permissions import Action, verifier
 
 
 @contextmanager
@@ -23,7 +24,7 @@ def session_authentifiee():
     with SessionLocal() as session:
         try:
             yield session, collaborateur_connecte(session)
-        except (AuthentificationError, PermissionRefusee) as erreur:
+        except ErreurMetier as erreur:
             raise click.ClickException(str(erreur)) from None
 
 
@@ -36,6 +37,7 @@ def cli() -> None:
 @click.option("--email", prompt="Email")
 def login(email: str) -> None:
     """Se connecter et ouvrir une session."""
+    supprimer_jeton()
     mot_de_passe = click.prompt("Mot de passe", hide_input=True)
     with SessionLocal() as session:
         try:
@@ -70,6 +72,43 @@ def clients_list() -> None:
     """Afficher tous les clients."""
     with session_authentifiee() as (session, collaborateur):
         views.afficher_clients(services.lister_clients(session, collaborateur))
+
+
+@clients.command("create")
+def clients_create() -> None:
+    """Créer un client."""
+    with session_authentifiee() as (session, collaborateur):
+        verifier(collaborateur, Action.CREER_CLIENT)
+        client = services.creer_client(
+            session,
+            collaborateur,
+            nom_complet=click.prompt("Nom complet"),
+            email=click.prompt("Email"),
+            telephone=click.prompt("Téléphone", default="", show_default=False),
+            entreprise=click.prompt("Entreprise", default="", show_default=False),
+        )
+        click.echo(f"Client créé : {client.nom_complet} (n° {client.id}).")
+
+
+@clients.command("update")
+@click.argument("client_id", type=int)
+@click.option("--nom", help="Nouveau nom complet.")
+@click.option("--email", help="Nouvel email.")
+@click.option("--telephone", help='Nouveau téléphone ("" pour l\'effacer).')
+@click.option("--entreprise", help='Nouvelle entreprise ("" pour l\'effacer).')
+def clients_update(client_id, nom, email, telephone, entreprise) -> None:
+    """Modifier un de vos clients : seules les options fournies changent."""
+    with session_authentifiee() as (session, collaborateur):
+        client = services.modifier_client(
+            session,
+            collaborateur,
+            client_id,
+            nom_complet=nom,
+            email=email,
+            telephone=telephone,
+            entreprise=entreprise,
+        )
+        click.echo(f"Client n° {client.id} mis à jour.")
 
 
 @cli.group()
