@@ -3,6 +3,7 @@
 from enum import Enum
 
 from crm.models import Client, Collaborateur, Contrat, Evenement
+from crm.exceptions import ErreurMetier
 
 
 class Action(Enum):
@@ -21,7 +22,7 @@ class Action(Enum):
     MODIFIER_EVENEMENT = "modifier un événement"
 
 
-class PermissionRefusee(Exception):
+class PermissionRefusee(ErreurMetier):
     """Levée quand le collaborateur n'a pas le droit d'effectuer l'action."""
 
 
