@@ -118,3 +118,82 @@ def modifier_client(
         setattr(client, champ, valeur)
     session.commit()
     return client
+
+def _verifier_montants(total, restant) -> None:
+    """Le reste à payer ne peut pas dépasser le montant total."""
+    if restant > total:
+        raise DonneesInvalides(
+            "Le reste à payer ne peut pas dépasser le montant total."
+        )
+
+
+def creer_contrat(
+    session: Session,
+    collaborateur: Collaborateur,
+    client_id: int,
+    montant_total,
+    montant_restant=None,
+) -> Contrat:
+    """Crée un contrat non signé pour un client"""
+    verifier(collaborateur, Action.CREER_CONTRAT)
+    client = _obtenir(ClientRepository(session), client_id, "client")
+    total = validators.montant(montant_total, "montant total")
+    if montant_restant in (None, ""):
+        restant = total
+    else:
+        restant = validators.montant(montant_restant, "reste à payer")
+    _verifier_montants(total, restant)
+
+    contrat = Contrat(
+        client=client, montant_total=total, montant_restant=restant, signe=False
+    )
+    ContratRepository(session).ajouter(contrat)
+    session.commit()
+    return contrat
+
+def modifier_contrat(
+    session: Session,
+    collaborateur: Collaborateur,
+    contrat_id: int,
+    montant_total=None,
+    montant_restant=None,
+    client_id: int | None = None,
+    signe: bool | None = None,
+) -> Contrat:
+    """Modifie les champs fournis (None = inchangé) d'un contrat.
+
+    Changer le client ou le statut de signature demande des droits en plus.
+    """
+    contrat = _obtenir(ContratRepository(session), contrat_id, "contrat")
+    verifier(collaborateur, Action.MODIFIER_CONTRAT, contrat)
+    if signe is not None and signe != contrat.signe:
+        verifier(collaborateur, Action.SIGNER_CONTRAT)
+    if client_id is not None:
+        # Changer de client revient à réattribuer le contrat :
+        # réservé à ceux qui créent les contrats, c'est-à-dire la gestion.
+        verifier(collaborateur, Action.CREER_CONTRAT)
+
+    changements = {}
+    if montant_total is not None:
+        changements["montant_total"] = validators.montant(
+            montant_total, "montant total"
+        )
+    if montant_restant is not None:
+        changements["montant_restant"] = validators.montant(
+            montant_restant, "reste à payer"
+        )
+    _verifier_montants(
+        changements.get("montant_total", contrat.montant_total),
+        changements.get("montant_restant", contrat.montant_restant),
+    )
+    if client_id is not None:
+        changements["client"] = _obtenir(
+            ClientRepository(session), client_id, "client"
+        )
+    if signe is not None:
+        changements["signe"] = signe
+
+    for champ, valeur in changements.items():
+        setattr(contrat, champ, valeur)
+    session.commit()
+    return contrat

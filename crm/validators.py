@@ -3,9 +3,11 @@
 import re
 
 from crm.exceptions import DonneesInvalides
+from decimal import Decimal, InvalidOperation
 
 FORMAT_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 FORMAT_TELEPHONE = re.compile(r"^\+?[0-9 .\-()]{6,30}$")
+MONTANT_MAX = Decimal("99999999.99")
 
 
 def texte_obligatoire(valeur: str | None, champ: str, longueur_max: int) -> str:
@@ -42,3 +44,21 @@ def telephone(valeur: str | None) -> str | None:
     if valeur is not None and not FORMAT_TELEPHONE.match(valeur):
         raise DonneesInvalides(f"Numéro de téléphone invalide : « {valeur} ».")
     return valeur
+
+
+def montant(valeur, champ: str) -> Decimal:
+    """Montant positif ou nul, au centime près ; accepte « 1 500,50 »."""
+    texte = str(valeur).strip().replace(" ", "").replace(",", ".")
+    try:
+        nombre = Decimal(texte)
+    except InvalidOperation:
+        raise DonneesInvalides(f"« {champ} » doit être un nombre.") from None
+    if not nombre.is_finite():
+        raise DonneesInvalides(f"« {champ} » doit être un nombre.")
+    if nombre < 0:
+        raise DonneesInvalides(f"« {champ} » ne peut pas être négatif.")
+    if nombre != nombre.quantize(Decimal("0.01")):
+        raise DonneesInvalides(f"« {champ} » : deux décimales maximum.")
+    if nombre > MONTANT_MAX:
+        raise DonneesInvalides(f"« {champ} » est trop grand.")
+    return nombre.quantize(Decimal("0.01"))
