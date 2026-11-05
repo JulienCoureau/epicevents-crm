@@ -119,6 +119,7 @@ def modifier_client(
     session.commit()
     return client
 
+
 def _verifier_montants(total, restant) -> None:
     """Le reste à payer ne peut pas dépasser le montant total."""
     if restant > total:
@@ -150,6 +151,7 @@ def creer_contrat(
     ContratRepository(session).ajouter(contrat)
     session.commit()
     return contrat
+
 
 def modifier_contrat(
     session: Session,
@@ -187,9 +189,7 @@ def modifier_contrat(
         changements.get("montant_restant", contrat.montant_restant),
     )
     if client_id is not None:
-        changements["client"] = _obtenir(
-            ClientRepository(session), client_id, "client"
-        )
+        changements["client"] = _obtenir(ClientRepository(session), client_id, "client")
     if signe is not None:
         changements["signe"] = signe
 
