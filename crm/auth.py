@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from crm.config import jwt_secret
+from crm.exceptions import ErreurMetier
 from crm.models import Collaborateur
 from crm.passwords import verifier_mot_de_passe
 
@@ -16,7 +17,7 @@ DUREE_JETON = timedelta(hours=8)
 FICHIER_JETON = Path.home() / ".epicevents" / "jeton"
 
 
-class AuthentificationError(Exception):
+class AuthentificationError(ErreurMetier):
     """Levée quand l'utilisateur n'est pas, ou plus, authentifié."""
 
 

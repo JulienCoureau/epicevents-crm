@@ -18,6 +18,10 @@ class Repository:
         """Retourne l'objet d'id donné, ou None s'il n'existe pas."""
         return self.session.get(self.modele, identifiant)
 
+    def ajouter(self, objet) -> None:
+        """Ajoute un nouvel objet à la session."""
+        self.session.add(objet)
+
 
 class ClientRepository(Repository):
     """Requêtes sur les clients."""
@@ -27,6 +31,12 @@ class ClientRepository(Repository):
     def lister(self) -> list[Client]:
         """Tous les clients, par ordre d'id."""
         return list(self.session.scalars(select(Client).order_by(Client.id)))
+
+    def trouver_par_email(self, email: str) -> Client | None:
+        """Le client qui a cet email, ou None."""
+        return self.session.scalars(
+            select(Client).where(Client.email == email)
+        ).one_or_none()
 
 
 class ContratRepository(Repository):
