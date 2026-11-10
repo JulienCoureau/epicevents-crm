@@ -175,3 +175,10 @@ def test_la_vue_affiche_les_montants_et_la_signature(ecran, donnees):
     texte = ecran.export_text()
     assert "50.00 €" in texte
     assert "Oui" in texte
+
+
+def test_des_crochets_dans_un_nom_ne_cassent_pas_l_affichage(ecran, donnees):
+    client = donnees.mariage.contrat.client
+    client.nom_complet = "Kevin [/red] [blink]Pirate"
+    views.afficher_clients([client])
+    assert "Kevin [/red] [blink]Pirate" in ecran.export_text()

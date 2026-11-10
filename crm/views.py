@@ -1,7 +1,12 @@
-"""Affichage en tableaux"""
+"""Affichage en tableaux
+donnée saisies par les utilisateurs sont neutralisées avec escape
+les crochets dans un nom ne doivent jamais etre interprétés par rich
+"""
 
 from rich.console import Console
 from rich.table import Table
+from rich.markup import escape
+
 
 from crm.models import Client, Contrat, Evenement
 
@@ -9,6 +14,11 @@ console = Console()
 
 FORMAT_DATE = "%d/%m/%Y"
 FORMAT_DATE_HEURE = "%d/%m/%Y %H:%M"
+
+
+def _texte(valeur) -> str:
+    """neutralise le formatage rich d'une donnée saisie par un utilisateur"""
+    return escape(str(valeur or ""))
 
 
 def _afficher(table: Table, nb_lignes: int, message_si_vide: str) -> None:
@@ -36,11 +46,11 @@ def afficher_clients(clients: list[Client]) -> None:
     for client in clients:
         table.add_row(
             str(client.id),
-            client.nom_complet,
-            client.email,
-            client.telephone or "",
-            client.entreprise or "",
-            client.commercial.nom,
+            _texte(client.nom_complet),
+            _texte(client.email),
+            _texte(client.telephone),
+            _texte(client.entreprise),
+            _texte(client.commercial.nom),
             client.date_creation.strftime(FORMAT_DATE),
             client.derniere_mise_a_jour.strftime(FORMAT_DATE),
         )
@@ -63,8 +73,8 @@ def afficher_contrats(contrats: list[Contrat]) -> None:
     for contrat in contrats:
         table.add_row(
             str(contrat.id),
-            contrat.client.nom_complet,
-            contrat.client.commercial.nom,
+            _texte(contrat.client.nom_complet),
+            _texte(contrat.client.commercial.nom),
             f"{contrat.montant_total:.2f} €",
             f"{contrat.montant_restant:.2f} €",
             contrat.date_creation.strftime(FORMAT_DATE),
@@ -91,16 +101,21 @@ def afficher_evenements(evenements: list[Evenement]) -> None:
         table.add_column(colonne, overflow="fold")
     for evenement in evenements:
         client = evenement.contrat.client
+        support = (
+            _texte(evenement.support.nom)
+            if evenement.support
+            else "[red]À attribuer[/red]"
+        )
         table.add_row(
             str(evenement.id),
-            evenement.nom,
+            _texte(evenement.nom),
             str(evenement.contrat_id),
-            client.nom_complet,
+            _texte(client.nom_complet),
             f"{client.email}\n{client.telephone or ''}",
             evenement.date_debut.strftime(FORMAT_DATE_HEURE),
             evenement.date_fin.strftime(FORMAT_DATE_HEURE),
-            evenement.support.nom if evenement.support else "[red]À attribuer[/red]",
-            evenement.lieu,
+            support,
+            _texte(evenement.lieu),
             str(evenement.participants),
         )
     _afficher(table, len(evenements), "Aucun événement.")
