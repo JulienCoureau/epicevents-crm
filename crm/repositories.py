@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from crm.models import Client, Contrat, Evenement
+from crm.models import Client, Contrat, Evenement, Collaborateur
 
 
 class Repository:
@@ -71,3 +71,9 @@ class EvenementRepository(Repository):
         if support_id is not None:
             requete = requete.where(Evenement.support_id == support_id)
         return list(self.session.scalars(requete))
+
+
+class CollaborateurRepository(Repository):
+    """Requêtes sur les collaborateurs."""
+
+    modele = Collaborateur

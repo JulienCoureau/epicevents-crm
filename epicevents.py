@@ -15,7 +15,7 @@ from crm.auth import (
 )
 from crm.database import SessionLocal
 from crm.exceptions import ErreurMetier
-from crm.permissions import Action, verifier
+from crm.permissions import Action, verifier, verifier_role
 
 
 @contextmanager
@@ -191,6 +191,62 @@ def evenements_list(sans_support: bool, mes_evenements: bool) -> None:
                 session, collaborateur, sans_support, mes_evenements
             )
         )
+
+
+@evenements.command("create")
+def evenements_create() -> None:
+    """Créer l'événement d'un contrat signé de l'un des clients."""
+    with session_authentifiee() as (session, collaborateur):
+        verifier_role(collaborateur, Action.CREER_EVENEMENT)
+        contrat_id = click.prompt("Numéro du contrat", type=int)
+        services.contrat_pour_nouvel_evenement(session, collaborateur, contrat_id)
+        evenement = services.creer_evenement(
+            session,
+            collaborateur,
+            contrat_id=contrat_id,
+            nom=click.prompt("Nom de l'événement"),
+            date_debut=click.prompt("Début (JJ/MM/AAAA HH:MM)"),
+            date_fin=click.prompt("Fin (JJ/MM/AAAA HH:MM)"),
+            lieu=click.prompt("Lieu"),
+            participants=click.prompt("Nombre de participants"),
+            notes=click.prompt("Notes", default="", show_default=False),
+        )
+        click.echo(f"Événement n° {evenement.id} créé : {evenement.nom}.")
+
+
+@evenements.command("update")
+@click.argument("evenement_id", type=int)
+@click.option("--nom", help="Nouveau nom.")
+@click.option("--debut", help="Nouveau début (JJ/MM/AAAA HH:MM).")
+@click.option("--fin", help="Nouvelle fin (JJ/MM/AAAA HH:MM).")
+@click.option("--lieu", help="Nouveau lieu.")
+@click.option("--participants", help="Nouveau nombre de participants.")
+@click.option("--notes", help='Nouvelles notes ("" pour les effacer).')
+@click.option(
+    "--support", "support_id", type=int, help="Numéro du support à désigner (gestion)."
+)
+@click.option(
+    "--contrat", "contrat_id", type=int, help="Numéro du nouveau contrat (gestion)."
+)
+def evenements_update(
+    evenement_id, nom, debut, fin, lieu, participants, notes, support_id, contrat_id
+) -> None:
+    """Modifier un événement : seules les options fournies changent."""
+    with session_authentifiee() as (session, collaborateur):
+        evenement = services.modifier_evenement(
+            session,
+            collaborateur,
+            evenement_id,
+            nom=nom,
+            date_debut=debut,
+            date_fin=fin,
+            lieu=lieu,
+            participants=participants,
+            notes=notes,
+            support_id=support_id,
+            contrat_id=contrat_id,
+        )
+        click.echo(f"Événement n° {evenement.id} mis à jour.")
 
 
 if __name__ == "__main__":

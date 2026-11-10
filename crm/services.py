@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 
 from crm.models import Client, Collaborateur, Contrat, Evenement
 from crm.permissions import Action, verifier
-from crm.repositories import ClientRepository, ContratRepository, EvenementRepository
+from crm.repositories import (
+    ClientRepository,
+    ContratRepository,
+    EvenementRepository,
+    CollaborateurRepository,
+)
 from crm import validators
 from crm.exceptions import DonneesInvalides, ObjetIntrouvable
 
@@ -197,3 +202,135 @@ def modifier_contrat(
         setattr(contrat, champ, valeur)
     session.commit()
     return contrat
+
+
+def _avec_fuseau(moment):
+    """Une date relue sans fuseau est considérée à l'heure de Paris."""
+    if moment.tzinfo is None:
+        return moment.replace(tzinfo=validators.FUSEAU)
+    return moment
+
+
+def _verifier_dates(debut, fin) -> None:
+    """La fin d'un événement doit être postérieure à son début."""
+    if _avec_fuseau(fin) <= _avec_fuseau(debut):
+        raise DonneesInvalides(
+            "La date de fin doit être postérieure à la date de début."
+        )
+
+
+def contrat_pour_nouvel_evenement(
+    session: Session, collaborateur: Collaborateur, contrat_id: int
+) -> Contrat:
+    """Vérifie qu'un événement peut être créé pour ce contrat."""
+    contrat = _obtenir(ContratRepository(session), contrat_id, "contrat")
+    verifier(collaborateur, Action.CREER_EVENEMENT, contrat)
+    if not contrat.signe:
+        raise DonneesInvalides(f"Le contrat n° {contrat.id} n'est pas encore signé.")
+    if contrat.evenement is not None:
+        raise DonneesInvalides(f"Le contrat n° {contrat.id} a déjà un événement.")
+    return contrat
+
+
+def creer_evenement(
+    session: Session,
+    collaborateur: Collaborateur,
+    contrat_id: int,
+    nom: str,
+    date_debut: str,
+    date_fin: str,
+    lieu: str,
+    participants,
+    notes: str | None = None,
+) -> Evenement:
+    """Crée l'événement d'un contrat signé ; réservé au commercial du client."""
+    contrat = contrat_pour_nouvel_evenement(session, collaborateur, contrat_id)
+
+    nom = validators.texte_obligatoire(nom, "nom", 100)
+    debut = validators.date_heure(date_debut, "date de début")
+    fin = validators.date_heure(date_fin, "date de fin")
+    _verifier_dates(debut, fin)
+    lieu = validators.texte_obligatoire(lieu, "lieu", 255)
+    participants = validators.nombre_participants(participants)
+    notes = validators.texte_facultatif(notes, "notes", 2000)
+
+    evenement = Evenement(
+        contrat=contrat,
+        nom=nom,
+        date_debut=debut,
+        date_fin=fin,
+        lieu=lieu,
+        participants=participants,
+        notes=notes,
+    )
+    EvenementRepository(session).ajouter(evenement)
+    session.commit()
+    return evenement
+
+
+def modifier_evenement(
+    session: Session,
+    collaborateur: Collaborateur,
+    evenement_id: int,
+    nom: str | None = None,
+    date_debut: str | None = None,
+    date_fin: str | None = None,
+    lieu: str | None = None,
+    participants=None,
+    notes: str | None = None,
+    support_id: int | None = None,
+    contrat_id: int | None = None,
+) -> Evenement:
+    """Modifie les champs fournis (None = inchangé) d'un événement.
+
+    La gestion modifie tous les événements et désigne le support ;
+    un support modifie les événements qui lui sont attribués.
+    """
+    evenement = _obtenir(EvenementRepository(session), evenement_id, "événement")
+    verifier(collaborateur, Action.MODIFIER_EVENEMENT, evenement)
+    if support_id is not None:
+        verifier(collaborateur, Action.ATTRIBUER_SUPPORT)
+    if contrat_id is not None:
+        # rattache evenement à un autre contrat
+        verifier(collaborateur, Action.CREER_CONTRAT)
+
+    changements = {}
+    if nom is not None:
+        changements["nom"] = validators.texte_obligatoire(nom, "nom", 100)
+    if date_debut is not None:
+        changements["date_debut"] = validators.date_heure(date_debut, "date de début")
+    if date_fin is not None:
+        changements["date_fin"] = validators.date_heure(date_fin, "date de fin")
+    _verifier_dates(
+        changements.get("date_debut", evenement.date_debut),
+        changements.get("date_fin", evenement.date_fin),
+    )
+    if lieu is not None:
+        changements["lieu"] = validators.texte_obligatoire(lieu, "lieu", 255)
+    if participants is not None:
+        changements["participants"] = validators.nombre_participants(participants)
+    if notes is not None:
+        changements["notes"] = validators.texte_facultatif(notes, "notes", 2000)
+    if support_id is not None:
+        support = _obtenir(
+            CollaborateurRepository(session), support_id, "collaborateur"
+        )
+        if support.role.nom != "support":
+            raise DonneesInvalides(
+                f"{support.nom} ne fait pas partie du département support."
+            )
+        changements["support"] = support
+    if contrat_id is not None:
+        contrat = _obtenir(ContratRepository(session), contrat_id, "contrat")
+        if not contrat.signe:
+            raise DonneesInvalides(
+                f"Le contrat n° {contrat.id} n'est pas encore signé."
+            )
+        if contrat.evenement is not None and contrat.evenement is not evenement:
+            raise DonneesInvalides(f"Le contrat n° {contrat.id} a déjà un événement.")
+        changements["contrat"] = contrat
+
+    for champ, valeur in changements.items():
+        setattr(evenement, champ, valeur)
+    session.commit()
+    return evenement

@@ -69,7 +69,7 @@ def test_un_montant_valide_est_converti(saisie, attendu):
 
 
 @pytest.mark.parametrize(
-    "saisie", ["abc", "", "-20", "10.555", "NaN", "Infinity", "100000000"]
+    "saisie", ["abc", "", "-20", "10.555", "NaN", "Infinity", "100000000", "1e100000"]
 )
 def test_un_montant_invalide_est_refuse(saisie):
     with pytest.raises(DonneesInvalides):
