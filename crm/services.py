@@ -219,6 +219,19 @@ def _verifier_dates(debut, fin) -> None:
         )
 
 
+def contrat_pour_nouvel_evenement(
+    session: Session, collaborateur: Collaborateur, contrat_id: int
+) -> Contrat:
+    """Vérifie qu'un événement peut être créé pour ce contrat."""
+    contrat = _obtenir(ContratRepository(session), contrat_id, "contrat")
+    verifier(collaborateur, Action.CREER_EVENEMENT, contrat)
+    if not contrat.signe:
+        raise DonneesInvalides(f"Le contrat n° {contrat.id} n'est pas encore signé.")
+    if contrat.evenement is not None:
+        raise DonneesInvalides(f"Le contrat n° {contrat.id} a déjà un événement.")
+    return contrat
+
+
 def creer_evenement(
     session: Session,
     collaborateur: Collaborateur,
@@ -231,12 +244,7 @@ def creer_evenement(
     notes: str | None = None,
 ) -> Evenement:
     """Crée l'événement d'un contrat signé ; réservé au commercial du client."""
-    contrat = _obtenir(ContratRepository(session), contrat_id, "contrat")
-    verifier(collaborateur, Action.CREER_EVENEMENT, contrat)
-    if not contrat.signe:
-        raise DonneesInvalides(f"Le contrat n° {contrat.id} n'est pas encore signé.")
-    if contrat.evenement is not None:
-        raise DonneesInvalides(f"Le contrat n° {contrat.id} a déjà un événement.")
+    contrat = contrat_pour_nouvel_evenement(session, collaborateur, contrat_id)
 
     nom = validators.texte_obligatoire(nom, "nom", 100)
     debut = validators.date_heure(date_debut, "date de début")
@@ -271,6 +279,7 @@ def modifier_evenement(
     participants=None,
     notes: str | None = None,
     support_id: int | None = None,
+    contrat_id: int | None = None,
 ) -> Evenement:
     """Modifie les champs fournis (None = inchangé) d'un événement.
 
@@ -281,6 +290,9 @@ def modifier_evenement(
     verifier(collaborateur, Action.MODIFIER_EVENEMENT, evenement)
     if support_id is not None:
         verifier(collaborateur, Action.ATTRIBUER_SUPPORT)
+    if contrat_id is not None:
+        # rattache evenement à un autre contrat
+        verifier(collaborateur, Action.CREER_CONTRAT)
 
     changements = {}
     if nom is not None:
@@ -308,6 +320,15 @@ def modifier_evenement(
                 f"{support.nom} ne fait pas partie du département support."
             )
         changements["support"] = support
+    if contrat_id is not None:
+        contrat = _obtenir(ContratRepository(session), contrat_id, "contrat")
+        if not contrat.signe:
+            raise DonneesInvalides(
+                f"Le contrat n° {contrat.id} n'est pas encore signé."
+            )
+        if contrat.evenement is not None and contrat.evenement is not evenement:
+            raise DonneesInvalides(f"Le contrat n° {contrat.id} a déjà un événement.")
+        changements["contrat"] = contrat
 
     for champ, valeur in changements.items():
         setattr(evenement, champ, valeur)

@@ -91,3 +91,12 @@ def verifier(collaborateur: Collaborateur, action: Action, objet=None) -> None:
     """Lève PermissionRefusee si le collaborateur n'a pas le droit."""
     if not a_le_droit(collaborateur, action, objet):
         raise PermissionRefusee(f"Vous n'avez pas le droit de {action.value}.")
+
+
+def verifier_role(collaborateur: Collaborateur, action: Action) -> None:
+    """Refuse d'emblée un rôle qui n'a jamais ce droit, quel que soit l'objet.
+
+    Le contrôle complet, qui dépend de l'objet, reste fait par verifier().
+    """
+    if action not in PERMISSIONS.get(collaborateur.role.nom, {}):
+        raise PermissionRefusee(f"Vous n'avez pas le droit de {action.value}.")

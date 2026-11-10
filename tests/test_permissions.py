@@ -3,7 +3,13 @@
 import pytest
 
 from crm.models import Client, Collaborateur, Contrat, Evenement, Role
-from crm.permissions import Action, PermissionRefusee, a_le_droit, verifier
+from crm.permissions import (
+    Action,
+    PermissionRefusee,
+    a_le_droit,
+    verifier,
+    verifier_role,
+)
 
 
 def employe(role: str, id: int = 1) -> Collaborateur:
@@ -91,3 +97,12 @@ def test_les_erreurs_d_acces_sont_des_erreurs_metier():
 
     assert issubclass(PermissionRefusee, ErreurMetier)
     assert issubclass(AuthentificationError, ErreurMetier)
+
+
+def test_verifier_role_arrete_un_role_qui_n_a_jamais_ce_droit():
+    with pytest.raises(PermissionRefusee):
+        verifier_role(employe("support"), Action.CREER_EVENEMENT)
+
+
+def test_verifier_role_laisse_passer_un_role_qui_peut_avoir_ce_droit():
+    verifier_role(employe("commercial"), Action.CREER_EVENEMENT)

@@ -183,3 +183,31 @@ def test_une_fin_modifiee_avant_le_debut_est_refusee(session, equipe, evenement)
 def test_un_evenement_inexistant_est_signale(session, equipe):
     with pytest.raises(ObjetIntrouvable):
         services.modifier_evenement(session, equipe["gestion"], 999, nom="Personne")
+
+
+def test_la_gestion_rattache_l_evenement_a_un_autre_contrat(session, equipe, evenement):
+    services.modifier_evenement(
+        session, equipe["gestion"], evenement.id, contrat_id=equipe["signe_paul"].id
+    )
+    assert evenement.contrat is equipe["signe_paul"]
+    assert equipe["signe_bill"].evenement is None
+
+
+def test_rattacher_a_un_contrat_non_signe_est_refuse(session, equipe, evenement):
+    with pytest.raises(DonneesInvalides, match="signé"):
+        services.modifier_evenement(
+            session,
+            equipe["gestion"],
+            evenement.id,
+            contrat_id=equipe["non_signe_bill"].id,
+        )
+
+
+def test_le_support_ne_change_pas_le_contrat(session, equipe, evenement):
+    services.modifier_evenement(
+        session, equipe["gestion"], evenement.id, support_id=equipe["kate"].id
+    )
+    with pytest.raises(PermissionRefusee):
+        services.modifier_evenement(
+            session, equipe["kate"], evenement.id, contrat_id=equipe["signe_paul"].id
+        )
