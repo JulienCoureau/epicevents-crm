@@ -9,6 +9,7 @@ from rich.markup import escape
 
 
 from crm.models import Client, Contrat, Evenement
+from crm.validators import FUSEAU
 
 console = Console()
 
@@ -19,6 +20,13 @@ FORMAT_DATE_HEURE = "%d/%m/%Y %H:%M"
 def _texte(valeur) -> str:
     """neutralise le formatage rich d'une donnée saisie par un utilisateur"""
     return escape(str(valeur or ""))
+
+
+def _date(moment, format_date: str) -> str:
+    """Ecrit une date à l'heure de paris"""
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=FUSEAU)
+    return moment.astimezone(FUSEAU).strftime(format_date)
 
 
 def _afficher(table: Table, nb_lignes: int, message_si_vide: str) -> None:
@@ -51,8 +59,8 @@ def afficher_clients(clients: list[Client]) -> None:
             _texte(client.telephone),
             _texte(client.entreprise),
             _texte(client.commercial.nom),
-            client.date_creation.strftime(FORMAT_DATE),
-            client.derniere_mise_a_jour.strftime(FORMAT_DATE),
+            _date(client.date_creation, FORMAT_DATE),
+            _date(client.derniere_mise_a_jour, FORMAT_DATE),
         )
     _afficher(table, len(clients), "Aucun client.")
 
@@ -77,7 +85,7 @@ def afficher_contrats(contrats: list[Contrat]) -> None:
             _texte(contrat.client.commercial.nom),
             f"{contrat.montant_total:.2f} €",
             f"{contrat.montant_restant:.2f} €",
-            contrat.date_creation.strftime(FORMAT_DATE),
+            _date(contrat.date_creation, FORMAT_DATE),
             "Oui" if contrat.signe else "Non",
         )
     _afficher(table, len(contrats), "Aucun contrat.")
@@ -112,8 +120,8 @@ def afficher_evenements(evenements: list[Evenement]) -> None:
             str(evenement.contrat_id),
             _texte(client.nom_complet),
             f"{client.email}\n{client.telephone or ''}",
-            evenement.date_debut.strftime(FORMAT_DATE_HEURE),
-            evenement.date_fin.strftime(FORMAT_DATE_HEURE),
+            _date(evenement.date_debut, FORMAT_DATE_HEURE),
+            _date(evenement.date_fin, FORMAT_DATE_HEURE),
             support,
             _texte(evenement.lieu),
             str(evenement.participants),

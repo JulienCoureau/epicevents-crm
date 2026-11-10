@@ -1,6 +1,6 @@
 """Tests de la lecture : filtres repositories, droits des services, vues."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -182,3 +182,9 @@ def test_des_crochets_dans_un_nom_ne_cassent_pas_l_affichage(ecran, donnees):
     client.nom_complet = "Kevin [/red] [blink]Pirate"
     views.afficher_clients([client])
     assert "Kevin [/red] [blink]Pirate" in ecran.export_text()
+
+
+def test_les_heures_sont_affichees_a_l_heure_de_paris(ecran, donnees):
+    donnees.mariage.date_debut = datetime(2026, 6, 4, 11, 0, tzinfo=timezone.utc)
+    views.afficher_evenements([donnees.mariage])
+    assert "04/06/2026 13:00" in ecran.export_text()
