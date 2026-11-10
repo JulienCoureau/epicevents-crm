@@ -62,10 +62,10 @@ def montant(valeur, champ: str) -> Decimal:
         raise DonneesInvalides(f"« {champ} » doit être un nombre.")
     if nombre < 0:
         raise DonneesInvalides(f"« {champ} » ne peut pas être négatif.")
-    if nombre != nombre.quantize(Decimal("0.01")):
-        raise DonneesInvalides(f"« {champ} » : deux décimales maximum.")
     if nombre > MONTANT_MAX:
         raise DonneesInvalides(f"« {champ} » est trop grand.")
+    if nombre != nombre.quantize(Decimal("0.01")):
+        raise DonneesInvalides(f"« {champ} » : deux décimales maximum.")
     return nombre.quantize(Decimal("0.01"))
 
 
